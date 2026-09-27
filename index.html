@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>World Economy Globe</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.css">
+<style>
+:root{
+  --bg:#05070d; --panel:rgba(12,17,28,.9); --line:rgba(255,255,255,.1); --soft:rgba(255,255,255,.05);
+  --text:#e8edf5; --muted:#8e9bb0; --accent:#5ebaff; --uk:#ffd24d;
+  --font: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden}
+#map{position:absolute;inset:0}
+.panel{background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:14px}
+button{font:inherit;color:inherit}
+a{color:var(--accent)}
+#card,#controls,#legend,#banner,#tip,#yearbar{position:absolute}
+
+/* ---------- Side panel ---------- */
+#side{position:absolute;top:16px;left:16px;bottom:16px;width:350px;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+#side>*{pointer-events:auto}
+header.panel{padding:14px 16px;flex:none}
+h1{margin:0;font-size:19px}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.45}
+#inds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+#inds button{border:1px solid var(--line);background:var(--soft);border-radius:9px;padding:7px 4px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;line-height:1.2}
+#inds button.on{background:rgba(94,186,255,.18);border-color:rgba(94,186,255,.5);color:var(--text)}
+#list{flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px}
+.def{font-size:13px;line-height:1.5}
+.def b{color:var(--text)}
+.compare{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:13px;margin:10px 0;padding:10px;border-radius:10px;background:var(--soft);border:1px solid var(--line)}
+.compare .v{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.compare .uk{color:var(--uk)}
+.seg{display:flex;background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:2px;margin:10px 0 6px}
+.seg button{flex:1;border:0;background:none;color:var(--muted);font-size:12.5px;font-weight:600;padding:6px;border-radius:7px;cursor:pointer}
+.seg button.on{background:rgba(94,186,255,.18);color:var(--text)}
+.rank{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px;cursor:pointer;font-size:13.5px}
+.rank:hover{background:rgba(255,255,255,.07)}
+.rank .n{width:22px;color:var(--muted);font-size:12px;text-align:right}
+.rank .sw{width:12px;height:12px;border-radius:3px;flex:none}
+.rank .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank .v{font-weight:700;font-variant-numeric:tabular-nums}
+.rank.ukrow{color:var(--uk)}
+.h3{margin:14px 0 6px;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.q{font-size:13px;line-height:1.55;padding-left:18px;margin:0}
+.q li{margin:4px 0}
+#search{width:100%;margin-top:10px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--text);font:inherit;font-size:13px}
+#results{position:relative}
+#results div{padding:6px 10px;cursor:pointer;font-size:13px;border-radius:6px}
+#results div:hover{background:rgba(255,255,255,.08)}
+
+/* ---------- Year bar ---------- */
+#yearbar{left:calc(50% + 175px);transform:translateX(-50%);bottom:16px;padding:10px 14px;display:flex;align-items:center;gap:12px;width:min(640px,calc(100% - 820px));min-width:420px;z-index:3}
+#yearbar button.play{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:var(--accent);color:#07111e;font-size:15px;cursor:pointer}
+#yearbar input{flex:1;accent-color:var(--accent);min-width:0}
+#yearLabel{min-width:92px;text-align:center}
+#yearLabel b{display:block;font-size:22px;line-height:1}
+#yearLabel small{color:var(--muted);font-size:11px}
+#yearLabel small.fc{color:#ffb86b}
+.jumps{display:flex;gap:4px;flex-wrap:wrap}
+.jumps button{border:1px solid var(--line);background:var(--soft);border-radius:7px;padding:3px 7px;font-size:11px;cursor:pointer;color:var(--muted)}
+
+/* ---------- Legend, tooltip, card ---------- */
+#legend{right:16px;bottom:16px;padding:8px 12px;font-size:12px;z-index:3}
+#legend .t{font-weight:600;margin-bottom:5px}
+#legend .row{display:flex;align-items:center;gap:6px;line-height:1.7}
+#legend i{width:14px;height:10px;border-radius:2px;display:inline-block}
+#tip{pointer-events:none;padding:6px 9px;font-size:12.5px;display:none;z-index:7;white-space:nowrap}
+#card{top:16px;right:16px;width:360px;padding:16px;display:none;max-height:calc(100% - 180px);overflow:auto;z-index:4}
+#card.show{display:block}
+#card .close{position:absolute;top:10px;right:12px;background:none;border:0;color:var(--muted);font-size:22px;cursor:pointer}
+#card h2{margin:0 0 2px;font-size:21px;padding-right:24px}
+.big{font-size:30px;font-weight:800;margin:10px 0 2px;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:1fr auto auto;gap:4px 10px;font-size:13px;margin-top:10px}
+.stats .hd{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.stats .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.stats .uk{color:var(--uk)}
+.stats .sel{color:var(--accent)}
+svg.spark{width:100%;height:120px;margin-top:8px}
+.note{color:var(--muted);font-size:11.5px;line-height:1.5;margin-top:10px}
+#banner{left:50%;top:16px;transform:translateX(-50%);padding:10px 14px;font-size:13px;display:none;max-width:460px;z-index:8}
+#banner.show{display:block}
+#controls{right:16px;top:16px;padding:10px 12px;font-size:13px;z-index:5}
+#controls summary{cursor:pointer;font-weight:600;list-style:none}
+#controls label{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;white-space:nowrap}
+#controls button.wide{margin-top:6px;width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:rgba(94,186,255,.15);cursor:pointer}
+body.carded #controls{display:none}
+#sheetHandle,.chead .more{display:none}
+.maplibregl-ctrl-attrib{background:rgba(0,0,0,.5)!important;color:#aaa}
+.maplibregl-ctrl-attrib a{color:#ccc}
+.maplibregl-ctrl-bottom-right{display:none}
+
+/* ---------- Classroom mode ---------- */
+body.classroom #list{display:none}
+body.classroom #side{bottom:auto}
+body.classroom h1{font-size:28px}
+body.classroom #inds button{font-size:15px;padding:10px 4px}
+body.classroom #yearLabel b{font-size:34px}
+body.classroom #legend{font-size:15px}
+body.classroom #card{font-size:17px;width:430px}
+
+/* ---------- Tablet and phone ---------- */
+@media (max-width:1099px){
+  #side{top:12px;left:12px;right:12px;bottom:12px;width:auto;gap:8px}
+  header.panel{padding:8px 10px;margin-right:56px}
+  h1{font-size:15px}
+  header .sub{display:none}
+  #inds{grid-template-columns:repeat(6,1fr);gap:4px;margin-top:6px}
+  #inds button{font-size:10.5px;padding:6px 2px}
+  #list{position:absolute;left:0;right:0;bottom:0;max-height:55vh;padding:0 10px 8px;display:flex;flex-direction:column}
+  #sheetHandle{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;font-size:14px;font-weight:600;padding:12px 2px 10px;cursor:pointer;flex:none;position:relative}
+  #sheetHandle::before{content:'';position:absolute;top:5px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:rgba(255,255,255,.25)}
+  #sheetHandle .chev{margin-left:auto;color:var(--muted);transition:transform .2s}
+  #list.open #sheetHandle .chev{transform:rotate(180deg)}
+  #listBody{overflow:auto;min-height:0}
+  #list:not(.open) #listBody{display:none}
+  body.carded #list{display:none}
+  #yearbar{left:12px;right:12px;transform:none;width:auto;min-width:0;bottom:calc(var(--sheetH,52px) + 22px);padding:8px 10px;gap:8px}
+  .jumps{display:none}
+  #legend{right:12px;top:auto;bottom:calc(var(--sheetH,52px) + 90px);font-size:11px;padding:6px 8px}
+  #card{left:12px;right:12px;top:auto;bottom:12px;width:auto;max-height:55vh;padding:12px 14px}
+  .chead{cursor:pointer}
+  .chead .more{display:inline-block;margin-top:4px;border:0;background:none;color:var(--accent);font-size:13px;font-weight:600;padding:0;cursor:pointer}
+  #card.peek .cbody{display:none}
+  #controls{top:12px;right:12px;padding:0}
+  #controls summary{padding:11px 14px}
+  #controls[open]{padding:10px 12px;width:240px}
+  #controls[open] summary{padding:0 0 6px}
+  body.carded #legend,body.sheetopen #legend{display:none}
+}
+@media (max-width:1099px) and (min-width:700px){
+  #list{right:auto;width:380px}
+  #card{right:auto;width:400px}
+  #yearbar{left:404px}
+  header.panel{max-width:560px}
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<aside id="side">
+  <header class="panel">
+    <h1>World Economy <span>Globe</span></h1>
+    <div class="sub" id="subtitle">How economies around the world are doing, from IMF data. Tap a country to compare it with the UK.</div>
+    <div id="inds" role="tablist"></div>
+  </header>
+  <div id="list" class="panel">
+    <button id="sheetHandle" aria-expanded="false"><span id="sheetText">Rankings</span><span class="chev">▲</span></button>
+    <div id="listBody"></div>
+  </div>
+</aside>
+
+<div id="yearbar" class="panel">
+  <button class="play" id="play" aria-label="Play through the years">▶</button>
+  <div id="yearLabel"><b>2026</b><small></small></div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:5px;min-width:0">
+    <input type="range" id="year" min="2000" max="2031" step="1" value="2025" aria-label="Year">
+    <div class="jumps" id="jumps"></div>
+  </div>
+</div>
+
+<div id="legend" class="panel"></div>
+<div id="tip" class="panel"></div>
+<div id="card" class="panel"></div>
+<div id="banner" class="panel"></div>
+
+<details id="controls" class="panel">
+  <summary>☰</summary>
+  <label><input type="checkbox" id="tSpin" checked> Spin the globe</label>
+  <label><input type="checkbox" id="tFlat"> Flat map</label>
+  <button class="wide" id="bClass">Classroom mode</button>
+</details>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script>
+// ================= Indicators =================
+// bins: upper limits of each colour band (last band is "above the last limit")
+const IND = {
+  NGDP_RPCH: { short: 'Growth', name: 'Real GDP growth', unit: '%', dp: 1,
+    bins: [-5, -2, 0, 1, 2, 4, 6], colors: ['#7f0000', '#d7301f', '#fc8d59', '#fee8a8', '#c7e9b4', '#7fcdbb', '#2c9f7a', '#00674f'],
+    def: '<b>Real GDP growth</b> is the percentage change in the value of everything an economy produces in a year, after removing the effect of inflation. Negative growth for two quarters in a row is a <b>recession</b>.',
+    q: ['Which regions are growing fastest? Why might emerging economies grow faster than advanced ones?', 'Press 2009 and 2020. Which countries avoided a recession, and why?', 'Is fast growth always a good thing? Think about inflation, inequality and the environment.'] },
+  PCPIPCH: { short: 'Inflation', name: 'Inflation (CPI)', unit: '%', dp: 1,
+    bins: [0, 2, 4, 7, 10, 20, 50], colors: ['#4a7bd0', '#ffffcc', '#fee391', '#fec44f', '#fe9929', '#ec7014', '#cc4c02', '#7a1c05'],
+    def: '<b>Inflation</b> is the rate at which the general level of prices rises, measured here by the Consumer Price Index. The Bank of England’s target is <b>2%</b>. Negative inflation is <b>deflation</b>.',
+    q: ['Which countries have inflation above 10%? Is it more likely to be demand-pull or cost-push there?', 'Play from 2020 to 2024. What happened to inflation worldwide, and why?', 'Why do most central banks aim for low, stable inflation rather than zero?'] },
+  LUR: { short: 'Unemploy&shy;ment', name: 'Unemployment rate', unit: '%', dp: 1,
+    bins: [3, 5, 7, 10, 15, 20], colors: ['#f2f0f7', '#dadaeb', '#bcbddc', '#9e9ac8', '#807dba', '#6a51a3', '#4a1486'],
+    def: '<b>Unemployment</b> is the share of the labour force (people able and willing to work) who don’t have a job but are actively looking for one. Data is missing for many lower-income countries.',
+    q: ['Why is unemployment so high in parts of southern Africa and southern Europe?', 'What types of unemployment might explain the highest rates here?', 'Is very low unemployment always good for an economy?'] },
+  GGXWDG_NGDP: { short: 'Govt debt', name: 'Government debt', unit: '% of GDP', dp: 0,
+    bins: [30, 60, 90, 120, 150], colors: ['#fff5eb', '#fdd0a2', '#fdae6b', '#f16913', '#d94801', '#8c2d04'],
+    def: '<b>Government debt</b> is the total amount a government owes, shown as a percentage of the country’s GDP so that countries of different sizes can be compared.',
+    q: ['Japan’s debt is over 200% of GDP. Why hasn’t that caused a crisis?', 'Play 2007 to 2021. When did government debt jump, and why?', 'What are the costs of high government debt for future generations?'] },
+  NGDPDPC: { short: 'GDP per head', name: 'GDP per head', unit: 'US$', dp: 0, money: true,
+    bins: [1000, 4000, 13000, 30000, 60000], colors: ['#edf8e9', '#c7e9c0', '#74c476', '#31a354', '#006d2c', '#00441b'],
+    def: '<b>GDP per head</b> (per capita) is GDP divided by the population: a rough measure of average income and living standards. Shown in US dollars.',
+    q: ['Why isn’t GDP per head a perfect measure of living standards?', 'Compare this map with Growth. Are the poorest countries catching up?', 'Why might GDP per head in US dollars change even if nothing changes in the economy?'] },
+  BCA_NGDPD: { short: 'Current account', name: 'Current account balance', unit: '% of GDP', dp: 1,
+    bins: [-10, -5, -2, 2, 5, 10], colors: ['#b2182b', '#ef8a62', '#fddbc7', '#f7f7f7', '#d1e5f0', '#67a9cf', '#2166ac'],
+    def: 'The <b>current account</b> mainly records trade in goods and services plus income flows. A <b>deficit</b> (negative) means a country spends more abroad than it earns; a <b>surplus</b> means it earns more.',
+    q: ['Which countries run big surpluses? Why might oil exporters and Germany have surpluses?', 'The UK usually has a current account deficit. Why might that be?', 'Is a current account deficit always a problem?'] },
+};
+const IND_ORDER = Object.keys(IND);
+const OTHER = { GGXCNL_NGDP: { name: 'Budget balance', unit: '% of GDP', dp: 1 }, LP: { name: 'Population', unit: 'm', dp: 1 } };
+const JUMPS = [[2009, 'Financial crisis'], [2020, 'Pandemic'], [2022, 'Inflation spike']];
+const GROUP_ROWS = [['WEOWORLD', 'World'], ['ADVEC', 'Advanced economies'], ['OEMDC', 'Emerging and developing']];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const compactMQ = window.matchMedia('(max-width: 1099px)');
+const isCompact = () => compactMQ.matches;
+
+const state = { ind: 'NGDP_RPCH', year: 2025, data: null, sel: null, rankMode: 'top', forecastFrom: 2026, playing: null, cardPeek: false };
+
+// ================= Formatting =================
+function fmt(k, v, withUnit = true) {
+  if (v === null || v === undefined) return '–';
+  const m = IND[k] || OTHER[k];
+  if (m.money) return '$' + Math.round(v).toLocaleString('en-GB');
+  const s = (m.dp === 0 ? Math.round(v) : v.toFixed(m.dp));
+  return withUnit ? s + (m.unit.startsWith('%') ? '%' : ' ' + m.unit) : s;
+}
+const val = (k, code, year = state.year) => {
+  const arr = state.data?.values[k]?.[code];
+  if (!arr) return null;
+  return arr[year - state.data.firstYear] ?? null;
+};
+function colorFor(k, v) {
+  if (v === null || v === undefined) return null;
+  const { bins, colors } = IND[k];
+  for (let i = 0; i < bins.length; i++) if (v < bins[i]) return colors[i];
+  return colors[colors.length - 1];
+}
+const nameOf = (code) => state.data.countries[code] || state.data.groups[code] || code;
+const isForecast = (y) => y >= state.forecastFrom;
+
+// ================= Map =================
+const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best';
+const map = new maplibregl.Map({
+  container: 'map', center: [10, 25], zoom: window.innerWidth < 700 ? 0.85 : 1.55, minZoom: 0.6, maxZoom: 6,
+  attributionControl: { compact: true },
+  style: {
+    version: 8, projection: { type: 'globe' },
+    sky: { 'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 5, 1, 7, 0] },
+    sources: { earth: { type: 'raster', tileSize: 256, maxzoom: 8,
+      tiles: [`${GIBS}/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg`],
+      attribution: 'Data: IMF World Economic Outlook · Imagery: NASA GIBS' } },
+    layers: [
+      { id: 'bg', type: 'background', paint: { 'background-color': '#000' } },
+      { id: 'earth', type: 'raster', source: 'earth', paint: { 'raster-saturation': -0.8, 'raster-brightness-max': 0.45 } },
+    ],
+  },
+});
+
+let shapes = null;
+map.on('load', async () => {
+  const [topo, ids] = await Promise.all([
+    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json').then((r) => r.json()),
+    fetch('data/shape-ids.json').then((r) => r.json()),
+  ]);
+  shapes = topojson.feature(topo, topo.objects.countries);
+  shapes.features.forEach((f, i) => { f.properties.code = ids[f.id || f.properties.name] || 'X' + i; });
+  shapes.features = shapes.features.filter((f) => f.properties.name !== 'Antarctica');
+  // Russia and Fiji have rings that cross the 180° line; shift them so they don't wrap round the globe
+  for (const f of shapes.features) {
+    const polys = f.geometry?.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry?.coordinates || [];
+    for (const p of polys) for (const ring of p) {
+      const xs = ring.map((c) => c[0]);
+      if (Math.max(...xs) - Math.min(...xs) > 180) ring.forEach((c) => { if (c[0] < 0) c[0] += 360; });
+    }
+  }
+  map.addSource('countries', { type: 'geojson', data: shapes, promoteId: 'code' });
+  map.addLayer({ id: 'fill', type: 'fill', source: 'countries', paint: {
+    'fill-color': ['coalesce', ['feature-state', 'color'], '#3a4150'],
+    'fill-opacity': ['case', ['boolean', ['feature-state', 'nodata'], false], 0.35, 0.9] } });
+  map.addLayer({ id: 'edge', type: 'line', source: 'countries', paint: { 'line-color': 'rgba(10,14,22,.8)', 'line-width': 0.5 } });
+  map.addLayer({ id: 'uk', type: 'line', source: 'countries', filter: ['==', ['get', 'code'], 'GBR'], paint: { 'line-color': '#ffd24d', 'line-width': 1.6 } });
+  map.addLayer({ id: 'sel', type: 'line', source: 'countries', filter: ['==', ['get', 'code'], ''], paint: { 'line-color': '#ffffff', 'line-width': 2.5 } });
+
+  map.on('mousemove', 'fill', (e) => {
+    const code = e.features[0].properties.code;
+    const tip = $('tip');
+    tip.innerHTML = `<b>${esc(state.data.countries[code] || e.features[0].properties.name)}</b> · ${fmt(state.ind, val(state.ind, code))}`;
+    tip.style.display = 'block';
+    tip.style.left = e.point.x + 14 + 'px';
+    tip.style.top = e.point.y + 14 + 'px';
+    map.getCanvas().style.cursor = 'pointer';
+  });
+  map.on('mouseleave', 'fill', () => { $('tip').style.display = 'none'; map.getCanvas().style.cursor = ''; });
+  map.on('click', 'fill', (e) => { const code = e.features[0].properties.code; if (state.data.countries[code]) select(code, false); });
+  map.on('click', (e) => { if (isCompact() && !map.queryRenderedFeatures(e.point, { layers: ['fill'] }).length) { $('controls').open = false; sheet(false); } });
+  paint();
+  animate();
+});
+
+function paint() {
+  if (!shapes || !state.data || !map.getSource('countries')) return;
+  for (const f of shapes.features) {
+    const code = f.properties.code;
+    const c = colorFor(state.ind, val(state.ind, code));
+    map.setFeatureState({ source: 'countries', id: code }, { color: c, nodata: !c });
+  }
+  map.setFilter('sel', ['==', ['get', 'code'], state.sel || '']);
+}
+
+// ================= UI =================
+function renderInds() {
+  $('inds').innerHTML = IND_ORDER.map((k) => `<button data-k="${k}" class="${k === state.ind ? 'on' : ''}" aria-pressed="${k === state.ind}">${IND[k].short}</button>`).join('');
+  $('inds').querySelectorAll('button').forEach((b) => b.onclick = () => { state.ind = b.dataset.k; update(); });
+}
+function renderLegend() {
+  const m = IND[state.ind];
+  const f = (v) => (m.money ? '$' + (v >= 1000 ? v / 1000 + 'k' : v) : v + (m.unit.startsWith('%') ? '%' : ''));
+  const rows = m.colors.map((c, i) => {
+    const lo = m.bins[i - 1], hi = m.bins[i];
+    const label = i === 0 ? `below ${f(hi)}` : i === m.colors.length - 1 ? `${f(lo)} or more` : `${f(lo)} to ${f(hi)}`;
+    return `<div class="row"><i style="background:${c}"></i>${label}</div>`;
+  }).reverse();
+  $('legend').innerHTML = `<div class="t">${m.name}${m.unit.includes('GDP') ? ' (% of GDP)' : ''}</div>${rows.join('')}<div class="row"><i style="background:#3a4150;opacity:.5"></i>no data</div>`;
+}
+function renderYear() {
+  $('year').value = state.year;
+  $('yearLabel').innerHTML = `<b>${state.year}</b><small class="${isForecast(state.year) ? 'fc' : ''}">${isForecast(state.year) ? 'IMF forecast' : 'actual'}</small>`;
+}
+function ranked() {
+  return Object.keys(state.data.countries).map((c) => [c, val(state.ind, c)]).filter(([, v]) => v !== null).sort((a, b) => b[1] - a[1]);
+}
+function renderList() {
+  const m = IND[state.ind];
+  const r = ranked();
+  const ukIdx = r.findIndex(([c]) => c === 'GBR');
+  const rows = state.rankMode === 'top' ? r.slice(0, 10) : r.slice(-10).reverse();
+  const n0 = state.rankMode === 'top' ? 1 : r.length;
+  const row = ([c, v], i, n) => `<div class="rank ${c === 'GBR' ? 'ukrow' : ''}" data-c="${c}"><span class="n">${n}</span><span class="sw" style="background:${colorFor(state.ind, v)}"></span><span class="nm">${esc(nameOf(c))}</span><span class="v">${fmt(state.ind, v)}</span></div>`;
+  const groups = GROUP_ROWS.map(([code, label]) => `<span>${label}</span><span class="v">${fmt(state.ind, val(state.ind, code))}</span>`).join('');
+  $('sheetText').textContent = `${m.name} · ${state.year}`;
+  $('listBody').innerHTML = `
+    <div class="def">${m.def}</div>
+    <div class="compare"><span class="uk">United Kingdom${ukIdx >= 0 ? ` (${ordinal(ukIdx + 1)} of ${r.length})` : ''}</span><span class="v uk">${fmt(state.ind, val(state.ind, 'GBR'))}</span>${groups}</div>
+    <div class="seg"><button data-m="top" class="${state.rankMode === 'top' ? 'on' : ''}">Highest 10</button><button data-m="bottom" class="${state.rankMode === 'bottom' ? 'on' : ''}">Lowest 10</button></div>
+    ${rows.map((x, i) => row(x, i, state.rankMode === 'top' ? i + 1 : n0 - i)).join('')}
+    <div class="h3">Discuss</div><ol class="q">${m.q.map((q) => `<li>${q}</li>`).join('')}</ol>
+    <input id="search" placeholder="Find a country…" autocomplete="off"><div id="results"></div>
+    <div class="note">Source: ${esc(state.data.source)}. ${isForecast(state.year) ? 'Figures for this year are IMF forecasts and may change.' : ''}</div>`;
+  $('listBody').querySelectorAll('.seg button').forEach((b) => b.onclick = () => { state.rankMode = b.dataset.m; renderList(); });
+  $('listBody').querySelectorAll('.rank').forEach((el) => el.onclick = () => select(el.dataset.c, true));
+  $('search').oninput = (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    const hits = q ? Object.entries(state.data.countries).filter(([c, n]) => n.toLowerCase().includes(q) && state.data.values.NGDP_RPCH[c]).slice(0, 6) : [];
+    $('results').innerHTML = hits.map(([c, n]) => `<div data-c="${c}">${esc(n)}</div>`).join('');
+    $('results').querySelectorAll('div').forEach((d) => d.onclick = () => select(d.dataset.c, true));
+  };
+}
+const ordinal = (n) => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
+
+function update() {
+  renderInds(); renderLegend(); renderYear(); renderList(); paint();
+  if (state.sel) showCard(state.sel);
+}
+
+// ================= Country card =================
+let centroids = {};
+function centroidOf(code) {
+  if (centroids[code]) return centroids[code];
+  const f = shapes?.features.find((x) => x.properties.code === code);
+  if (!f) return null;
+  // Centre of the largest polygon's bounding box: good enough to fly to
+  let polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+  let best = null, area = -1;
+  for (const p of polys) {
+    let [x0, y0, x1, y1] = [180, 90, -180, -90];
+    for (const [x, y] of p[0]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const a = (x1 - x0) * (y1 - y0);
+    if (a > area) { area = a; best = [(x0 + x1) / 2, (y0 + y1) / 2]; }
+  }
+  return (centroids[code] = best);
+}
+
+function select(code, fly) {
+  if (code !== state.sel) state.cardPeek = isCompact();
+  state.sel = code;
+  stopSpin();
+  sheet(false);
+  paint();
+  showCard(code);
+  const c = centroidOf(code);
+  if (fly && c) map.flyTo({ center: c, zoom: Math.max(map.getZoom(), 2.4), speed: 0.8 });
+}
+
+function sparkline(code) {
+  const k = state.ind, first = state.data.firstYear;
+  const a = state.data.values[k][code] || [], uk = state.data.values[k].GBR || [];
+  const n = Math.max(a.length, uk.length);
+  const all = [...a, ...uk].filter((v) => v !== null);
+  if (!all.length) return '';
+  let lo = Math.min(0, ...all), hi = Math.max(0, ...all);
+  if (hi - lo < 1) hi = lo + 1;
+  const W = 320, H = 110, P = 18;
+  const X = (i) => P + (i / (n - 1)) * (W - P * 2), Y = (v) => H - 14 - ((v - lo) / (hi - lo)) * (H - 26);
+  const line = (arr) => arr.map((v, i) => v === null ? null : `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).filter(Boolean).join(' ');
+  const fx = X(state.forecastFrom - first), yx = X(state.year - first);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="${IND[k].name} over time">
+    <rect x="${fx}" y="0" width="${W - P - fx}" height="${H - 14}" fill="rgba(255,184,107,.08)"/>
+    <text x="${W - P}" y="10" fill="#ffb86b" font-size="9" text-anchor="end">forecast</text>
+    <line x1="${P}" x2="${W - P}" y1="${Y(0)}" y2="${Y(0)}" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 3"/>
+    ${code !== 'GBR' ? `<polyline points="${line(uk)}" fill="none" stroke="#ffd24d" stroke-width="1.5" opacity=".8"/>` : ''}
+    <polyline points="${line(a)}" fill="none" stroke="#5ebaff" stroke-width="2.2"/>
+    <line x1="${yx}" x2="${yx}" y1="0" y2="${H - 14}" stroke="#fff" stroke-width="1" opacity=".6"/>
+    <text x="${P}" y="${H - 2}" fill="#8e9bb0" font-size="9">${first}</text>
+    <text x="${W - P}" y="${H - 2}" fill="#8e9bb0" font-size="9" text-anchor="end">${first + n - 1}</text>
+    <text x="${P}" y="10" fill="#8e9bb0" font-size="9">${fmt(k, hi)}</text>
+  </svg>`;
+}
+
+function showCard(code) {
+  const card = $('card'), k = state.ind, m = IND[k];
+  const r = ranked(), idx = r.findIndex(([c]) => c === code);
+  const rows = [...IND_ORDER, 'GGXCNL_NGDP'].map((key) => {
+    const name = (IND[key] || OTHER[key]).name;
+    return `<span class="${key === k ? 'sel' : ''}">${name}</span><span class="v ${key === k ? 'sel' : ''}">${fmt(key, val(key, code))}</span><span class="v uk">${code === 'GBR' ? '' : fmt(key, val(key, 'GBR'))}</span>`;
+  }).join('');
+  card.innerHTML = `
+    <div class="chead">
+      <button class="close" aria-label="Close">×</button>
+      <h2>${esc(nameOf(code))}</h2>
+      <div class="sub">${m.name}, ${state.year}${isForecast(state.year) ? ' (IMF forecast)' : ''}</div>
+      <div class="big"><span style="display:inline-block;width:18px;height:18px;border-radius:4px;margin-right:10px;vertical-align:2px;background:${colorFor(k, val(k, code)) || '#3a4150'}"></span>${fmt(k, val(k, code))}</div>
+      <div class="sub">${idx >= 0 ? `${ordinal(idx + 1)} highest of ${r.length} countries` : 'No figure for this year'}</div>
+      <button class="more"></button>
+    </div>
+    <div class="cbody">
+      ${sparkline(code)}
+      <div class="note" style="margin-top:0"><span style="color:#5ebaff">━</span> ${esc(nameOf(code))} ${code !== 'GBR' ? '<span style="color:#ffd24d;margin-left:8px">━</span> United Kingdom' : ''}</div>
+      <div class="stats"><span class="hd">${state.year}</span><span class="hd v">${esc(nameOf(code).split(' ')[0])}</span><span class="hd v uk">${code === 'GBR' ? '' : 'UK'}</span>${rows}
+        <span>Population</span><span class="v">${fmt('LP', val('LP', code))}</span><span class="v uk">${code === 'GBR' ? '' : fmt('LP', val('LP', 'GBR'))}</span></div>
+      <div class="h3">Compare</div>
+      <ol class="q">
+        <li>How does ${esc(nameOf(code))} compare with the UK on growth, inflation and unemployment? Which is doing better overall?</li>
+        <li>Look at the line chart. What happened in ${esc(nameOf(code))} in 2009 and 2020?</li>
+      </ol>
+      <div class="note">Budget balance is government revenue minus spending (negative = deficit). Source: ${esc(state.data.source)}.</div>
+    </div>`;
+  const head = card.querySelector('.chead'), more = card.querySelector('.more');
+  const setPeek = (p) => { state.cardPeek = p; card.classList.toggle('peek', isCompact() && p); more.textContent = p ? 'Show details ▲' : 'Hide details ▼'; };
+  setPeek(state.cardPeek);
+  head.onclick = (e) => { if (!isCompact() || e.target.closest('.close')) return; setPeek(!state.cardPeek); };
+  card.querySelector('.close').onclick = (e) => { e.stopPropagation(); closeCard(); };
+  card.classList.add('show');
+  document.body.classList.add('carded');
+  syncSheetH();
+}
+function closeCard() {
+  state.sel = null;
+  $('card').classList.remove('show');
+  document.body.classList.remove('carded');
+  paint(); syncSheetH();
+}
+
+// ================= Year controls =================
+$('year').oninput = (e) => { stopPlay(); state.year = +e.target.value; update(); };
+$('jumps').innerHTML = JUMPS.map(([y, t]) => `<button data-y="${y}">${y} ${t}</button>`).join('');
+$('jumps').querySelectorAll('button').forEach((b) => b.onclick = () => { stopPlay(); state.year = +b.dataset.y; update(); });
+function stopPlay() { clearInterval(state.playing); state.playing = null; $('play').textContent = '▶'; }
+$('play').onclick = () => {
+  if (state.playing) return stopPlay();
+  if (state.year >= +$('year').max) state.year = +$('year').min;
+  $('play').textContent = '❚❚';
+  state.playing = setInterval(() => {
+    if (state.year >= +$('year').max) return stopPlay();
+    state.year++; update();
+  }, 900);
+};
+
+// ================= Sheet, spin, classroom =================
+function sheet(open) { document.body.classList.toggle('sheetopen', open); $('list').classList.toggle('open', open); $('sheetHandle').setAttribute('aria-expanded', open); syncSheetH(); }
+$('sheetHandle').onclick = () => sheet(!$('list').classList.contains('open'));
+function syncSheetH() {
+  const el = document.body.classList.contains('carded') ? $('card') : $('list');
+  document.documentElement.style.setProperty('--sheetH', (el.offsetHeight || 52) + 'px');
+}
+new ResizeObserver(syncSheetH).observe($('card'));
+new ResizeObserver(syncSheetH).observe($('list'));
+compactMQ.addEventListener('change', () => { $('card').classList.toggle('peek', isCompact() && state.cardPeek); syncSheetH(); });
+
+let spinning = true;
+function stopSpin() { spinning = false; $('tSpin').checked = false; }
+map.on('dragstart', stopSpin);
+function animate() {
+  const tick = () => { if (spinning && !map.isMoving()) { const c = map.getCenter(); map.jumpTo({ center: [c.lng + 0.05, c.lat] }); } requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+$('tSpin').onchange = (e) => (spinning = e.target.checked);
+$('tFlat').onchange = (e) => map.setProjection({ type: e.target.checked ? 'mercator' : 'globe' });
+$('bClass').onclick = () => {
+  const on = document.body.classList.toggle('classroom');
+  $('bClass').textContent = on ? 'Exit classroom mode' : 'Classroom mode';
+  $('controls').open = false;
+};
+map.once('load', () => setTimeout(() => { if (isCompact()) document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'); }, 300));
+
+// ================= Start =================
+(async () => {
+  try {
+    state.data = await (await fetch('data/imf.json', { cache: 'no-cache' })).json();
+    const ed = (state.data.edition.match(/(20\d\d)/) || [])[1];
+    state.forecastFrom = ed ? +ed : new Date().getFullYear();
+    const lastYear = state.data.firstYear + Math.max(...Object.values(state.data.values.NGDP_RPCH).map((a) => a.length)) - 1;
+    $('year').min = state.data.firstYear;
+    $('year').max = lastYear;
+    state.year = state.forecastFrom - 1; // latest year of (mostly) actual figures
+    const want = new URLSearchParams(location.search);
+    if (want.get('year')) state.year = +want.get('year');
+    if (IND[want.get('show')]) state.ind = want.get('show');
+    update();
+    if (!isCompact()) sheet(true);
+  } catch (e) {
+    console.error(e);
+    $('banner').innerHTML = '<b>Couldn’t load the data.</b> Open this page from its website (GitHub Pages or Vercel) rather than as a file.';
+    $('banner').classList.add('show');
+  }
+})();
+</script>
+</body>
+</html>
