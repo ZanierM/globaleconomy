@@ -26,7 +26,8 @@ header.panel{padding:14px 16px;flex:none}
 h1{margin:0;font-size:19px}
 h1 span{color:var(--accent)}
 .sub{color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.45}
-#inds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+#cats{margin:12px 0 0}
+#inds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
 #inds button{border:1px solid var(--line);background:var(--soft);border-radius:9px;padding:7px 4px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;line-height:1.2}
 #inds button.on{background:rgba(94,186,255,.18);border-color:rgba(94,186,255,.5);color:var(--text)}
 #list{flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px}
@@ -65,7 +66,7 @@ h1 span{color:var(--accent)}
 .jumps button{border:1px solid var(--line);background:var(--soft);border-radius:7px;padding:3px 7px;font-size:11px;cursor:pointer;color:var(--muted)}
 
 /* ---------- Legend, tooltip, card ---------- */
-#legend{right:16px;bottom:16px;padding:8px 12px;font-size:12px;z-index:3}
+#legend{right:16px;bottom:16px;padding:8px 12px;font-size:12px;z-index:3;max-width:190px}
 #legend .t{font-weight:600;margin-bottom:5px}
 #legend .row{display:flex;align-items:center;gap:6px;line-height:1.7}
 #legend i{width:14px;height:10px;border-radius:2px;display:inline-block}
@@ -109,8 +110,11 @@ body.classroom #card{font-size:17px;width:430px}
   header.panel{padding:8px 10px;margin-right:56px}
   h1{font-size:15px}
   header .sub{display:none}
-  #inds{grid-template-columns:repeat(6,1fr);gap:4px;margin-top:6px}
-  #inds button{font-size:10.5px;padding:6px 2px}
+  #cats{margin-top:6px}
+  #cats button{font-size:11.5px;padding:5px 2px}
+  #inds{display:flex;gap:4px;margin-top:6px;overflow-x:auto;scrollbar-width:none}
+  #inds::-webkit-scrollbar{display:none}
+  #inds button{font-size:11px;padding:6px 9px;white-space:nowrap;flex:none}
   #list{position:absolute;left:0;right:0;bottom:0;max-height:55vh;padding:0 10px 8px;display:flex;flex-direction:column}
   #sheetHandle{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;font-size:14px;font-weight:600;padding:12px 2px 10px;cursor:pointer;flex:none;position:relative}
   #sheetHandle::before{content:'';position:absolute;top:5px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:rgba(255,255,255,.25)}
@@ -147,6 +151,7 @@ body.classroom #card{font-size:17px;width:430px}
   <header class="panel">
     <h1>World Economy <span>Globe</span></h1>
     <div class="sub" id="subtitle">How economies around the world are doing, from IMF data. Tap a country to compare it with the UK.</div>
+    <div id="cats" class="seg" role="tablist"></div>
     <div id="inds" role="tablist"></div>
   </header>
   <div id="list" class="panel">
@@ -206,40 +211,117 @@ const IND = {
     bins: [-10, -5, -2, 2, 5, 10], colors: ['#b2182b', '#ef8a62', '#fddbc7', '#f7f7f7', '#d1e5f0', '#67a9cf', '#2166ac'],
     def: 'The <b>current account</b> mainly records trade in goods and services plus income flows. A <b>deficit</b> (negative) means a country spends more abroad than it earns; a <b>surplus</b> means it earns more.',
     q: ['Which countries run big surpluses? Why might oil exporters and Germany have surpluses?', 'The UK usually has a current account deficit. Why might that be?', 'Is a current account deficit always a problem?'] },
+  // ---------- Size and living standards (IMF) ----------
+  NGDPD: { cat: 'size', short: 'Size of economy', name: 'GDP (size of economy)', unit: '$bn', dp: 0, bn: true,
+    bins: [10, 50, 250, 1000, 5000, 20000], colors: ['#eff3ff', '#c6dbef', '#9ecae1', '#6baed6', '#3182bd', '#08519c', '#08306b'],
+    def: '<b>GDP</b> is the total value of everything a country produces in a year, here in US dollars. It shows the <b>size</b> of an economy, not how well off its people are.',
+    q: ['How many of the ten largest economies are emerging economies?', 'Compare with GDP per head. How can a country have a huge economy but low living standards?', 'Play from 2000 to 2031. Which economies grow the most?'] },
+  PPPPC: { cat: 'size', short: 'GDP per head (PPP)', name: 'GDP per head (PPP)', unit: 'int$', dp: 0, money: true,
+    bins: [2500, 7500, 15000, 30000, 50000, 80000], colors: ['#f7fcf5', '#d9f0d3', '#a6dba0', '#74c476', '#41ab5d', '#238b45', '#00441b'],
+    def: '<b>GDP per head at purchasing power parity (PPP)</b> adjusts for the fact that the same money buys more in some countries than others. It’s a fairer way to compare <b>living standards</b>.',
+    q: ['Compare with GDP per head in US dollars. Which countries move up the most, and why?', 'Why is PPP a fairer way to compare living standards?', 'What does GDP per head still leave out?'] },
+  PPPSH: { cat: 'size', short: 'Share of world GDP', name: 'Share of world GDP (PPP)', unit: '%', dp: 1,
+    bins: [0.1, 0.5, 1, 2, 5, 10], colors: ['#fcfbfd', '#efedf5', '#dadaeb', '#bcbddc', '#9e9ac8', '#756bb1', '#54278f'],
+    def: 'Each country’s <b>share of total world output</b>, measured at purchasing power parity. It shows how economic weight is shifting around the world.',
+    q: ['Play from 2000 to 2031. Whose share is growing and whose is shrinking?', 'What might this shift mean for global power and trade?', 'How has the UK’s share changed?'] },
+  // ---------- Development and inequality (World Bank) ----------
+  'SP.DYN.LE00.IN': { cat: 'dev', src: 'wb', carry: 4, short: 'Life expectancy', name: 'Life expectancy', unit: 'years', dp: 1,
+    bins: [55, 60, 65, 70, 75, 80], colors: ['#a50026', '#e34a33', '#fc8d59', '#fee08b', '#d9ef8b', '#91cf60', '#1a9850'],
+    def: '<b>Life expectancy</b> is how many years a baby born now would be expected to live. It’s a key <b>development indicator</b> and part of the Human Development Index.',
+    q: ['Which regions have the lowest life expectancy? What economic factors might explain it?', 'Play 2019 to 2022. What happened, and why?', 'Compare with GDP per head. Is the link always strong?'] },
+  'SI.POV.GINI': { cat: 'dev', src: 'wb', carry: 12, short: 'Inequality (Gini)', name: 'Income inequality (Gini)', unit: '', dp: 1,
+    bins: [30, 35, 40, 45, 50, 55], colors: ['#1a9850', '#91cf60', '#d9ef8b', '#fee08b', '#fc8d59', '#d73027', '#a50026'],
+    def: 'The <b>Gini coefficient</b> measures how evenly income is shared: <b>0</b> means everyone has the same, <b>100</b> means one person has everything. Countries survey this every few years, so the latest figure may be several years old.',
+    q: ['Which region has the most unequal countries?', 'Can a country have high GDP per head and high inequality? Find an example.', 'What government policies could reduce inequality?'] },
+  'SI.POV.DDAY': { cat: 'dev', src: 'wb', carry: 12, short: 'Extreme poverty', name: 'Extreme poverty', unit: '% of people', dp: 1,
+    bins: [1, 5, 10, 20, 40, 60], colors: ['#ffffcc', '#ffeda0', '#fed976', '#feb24c', '#fd8d3c', '#e31a1c', '#800026'],
+    def: 'The share of people living on less than <b>$3.00 a day</b> (adjusted for prices, 2021 PPP): the World Bank’s international poverty line. Surveys are infrequent, so figures may be several years old.',
+    q: ['Where is extreme poverty concentrated?', 'What barriers to development might explain it?', 'Is economic growth enough on its own to reduce poverty?'] },
+  'EN.GHG.CO2.PC.CE.AR5': { cat: 'dev', src: 'wb', carry: 4, short: 'CO₂ per head', name: 'CO₂ emissions per head', unit: 'tonnes', dp: 1,
+    bins: [1, 2, 4, 7, 10, 15], colors: ['#ffffe5', '#fee391', '#fec44f', '#fe9929', '#ec7014', '#cc4c02', '#8c2d04'],
+    def: 'Carbon dioxide emitted per person each year, in tonnes. It links economic activity to <b>environmental sustainability</b> and negative externalities.',
+    q: ['Compare with GDP per head. What does this suggest about growth and the environment?', 'Is it fair to ask poorer countries to cut emissions as much as rich ones?', 'Find a rich country with low emissions per head. How might it manage that?'] },
+  // ---------- Trade and globalisation (World Bank) ----------
+  'NE.TRD.GNFS.ZS': { cat: 'trade', src: 'wb', carry: 4, short: 'Trade openness', name: 'Trade openness (exports + imports)', unit: '% of GDP', dp: 0,
+    bins: [40, 60, 80, 100, 150, 200], colors: ['#f7fcfd', '#ccece6', '#99d8c9', '#66c2a4', '#41ae76', '#238b45', '#005824'],
+    def: '<b>Trade openness</b> is exports plus imports as a percentage of GDP. It shows how much a country relies on trade and how <b>globalised</b> it is.',
+    q: ['Why are small countries often much more open to trade than large ones?', 'What are the risks of being very open to trade?', 'How open is the UK compared with its neighbours?'] },
+  'NE.EXP.GNFS.ZS': { cat: 'trade', src: 'wb', carry: 4, short: 'Exports', name: 'Exports', unit: '% of GDP', dp: 0,
+    bins: [10, 20, 30, 50, 75, 100], colors: ['#f7fcf0', '#ccebc5', '#a8ddb5', '#7bccc4', '#4eb3d3', '#2b8cbe', '#08589e'],
+    def: '<b>Exports</b> of goods and services as a percentage of GDP. Countries with high figures depend heavily on selling abroad (<b>export-led growth</b>).',
+    q: ['Which countries rely most on exports?', 'What happens to export-led economies during a global recession?', 'How might a fall in the exchange rate affect these countries?'] },
+  'BX.KLT.DINV.WD.GD.ZS': { cat: 'trade', src: 'wb', carry: 4, short: 'FDI inflows', name: 'Foreign direct investment (inflows)', unit: '% of GDP', dp: 1,
+    bins: [0, 1, 2, 4, 8, 15], colors: ['#d6604d', '#f7f7f7', '#d1e5f0', '#92c5de', '#4393c3', '#2166ac', '#053061'],
+    def: '<b>Foreign direct investment (FDI)</b> is money invested by foreign firms in a country’s businesses, factories and property. Shown as net inflows as a percentage of GDP; negative means more was withdrawn than invested.',
+    q: ['Which countries attract the most FDI relative to their size? Why?', 'What are the costs and benefits of FDI for a developing country?', 'Why might FDI be very volatile from year to year?'] },
+  'BX.TRF.PWKR.DT.GD.ZS': { cat: 'trade', src: 'wb', carry: 4, short: 'Remittances', name: 'Remittances received', unit: '% of GDP', dp: 1,
+    bins: [1, 2, 5, 10, 20, 30], colors: ['#fcfbfd', '#efedf5', '#dadaeb', '#bcbddc', '#9e9ac8', '#6a51a3', '#3f007d'],
+    def: '<b>Remittances</b> are money sent home by people working abroad. For some countries they are a major source of income.',
+    q: ['Which countries rely most on remittances? Why?', 'How can remittances help development? What are the drawbacks?', 'How might a recession in rich countries affect these countries?'] },
+  'NV.AGR.TOTL.ZS': { cat: 'trade', src: 'wb', carry: 4, short: 'Agriculture', name: 'Agriculture (primary sector)', unit: '% of GDP', dp: 1,
+    bins: [2, 5, 10, 20, 30, 40], colors: ['#ffffe5', '#f7fcb9', '#d9f0a3', '#addd8e', '#78c679', '#31a354', '#006837'],
+    def: 'The share of GDP from <b>agriculture, forestry and fishing</b> (the primary sector). It usually falls as countries develop.',
+    q: ['Where is agriculture still a big part of the economy? What does that suggest about development?', 'Why does agriculture’s share fall as countries get richer?', 'What risks come with relying on agriculture?'] },
+  'NV.IND.TOTL.ZS': { cat: 'trade', src: 'wb', carry: 4, short: 'Industry', name: 'Industry (secondary sector)', unit: '% of GDP', dp: 1,
+    bins: [15, 20, 25, 30, 40, 50], colors: ['#f7f4f9', '#e7e1ef', '#d4b9da', '#c994c7', '#df65b0', '#ce1256', '#91003f'],
+    def: 'The share of GDP from <b>industry</b>: manufacturing, mining, construction and energy (the secondary sector).',
+    q: ['Many of the most “industrial” countries are oil producers. Why?', 'What is deindustrialisation, and where can you see it?', 'Why has industry’s share fallen in the UK?'] },
+  'NV.SRV.TOTL.ZS': { cat: 'trade', src: 'wb', carry: 4, short: 'Services', name: 'Services (tertiary sector)', unit: '% of GDP', dp: 1,
+    bins: [40, 50, 60, 70, 80], colors: ['#f7fbff', '#c6dbef', '#6baed6', '#2171b5', '#08519c', '#08306b'],
+    def: 'The share of GDP from <b>services</b> such as finance, retail, health, education and tourism (the tertiary sector).',
+    q: ['Why do richer countries usually have larger service sectors?', 'What are the strengths and weaknesses of a service-based economy like the UK?', 'Which developing countries already have large service sectors, and why?'] },
 };
+for (const m of Object.values(IND)) { m.cat ||= 'head'; m.src ||= 'imf'; m.carry ||= 0; }
+const CATS = [['head', 'Headline'], ['size', 'Size'], ['dev', 'Development'], ['trade', 'Trade']];
 const IND_ORDER = Object.keys(IND);
-const OTHER = { GGXCNL_NGDP: { name: 'Budget balance', unit: '% of GDP', dp: 1 }, LP: { name: 'Population', unit: 'm', dp: 1 } };
+const HEADLINE = ['NGDP_RPCH', 'PCPIPCH', 'LUR', 'NGDPDPC'];
+const OTHER = { GGXCNL_NGDP: { name: 'Budget balance', unit: '% of GDP', dp: 1, src: 'imf' }, LP: { name: 'Population', unit: 'm', dp: 1, src: 'imf' } };
 const JUMPS = [[2009, 'Financial crisis'], [2020, 'Pandemic'], [2022, 'Inflation spike']];
-const GROUP_ROWS = [['WEOWORLD', 'World'], ['ADVEC', 'Advanced economies'], ['OEMDC', 'Emerging and developing']];
+const GROUP_ROWS = {
+  imf: [['WEOWORLD', 'World'], ['ADVEC', 'Advanced economies'], ['OEMDC', 'Emerging and developing']],
+  wb: [['WLD', 'World'], ['HIC', 'High-income countries'], ['LMY', 'Low and middle income']],
+};
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const compactMQ = window.matchMedia('(max-width: 1099px)');
 const isCompact = () => compactMQ.matches;
 
-const state = { ind: 'NGDP_RPCH', year: 2025, data: null, sel: null, rankMode: 'top', forecastFrom: 2026, playing: null, cardPeek: false };
+const state = { ind: 'NGDP_RPCH', year: 2025, data: null, wb: null, sel: null, hideSmall: true, rankMode: 'top', forecastFrom: 2026, playing: null, cardPeek: false };
 
 // ================= Formatting =================
 function fmt(k, v, withUnit = true) {
   if (v === null || v === undefined) return '–';
   const m = IND[k] || OTHER[k];
+  if (m.bn) return v >= 1000 ? `$${(v / 1000).toFixed(1)}tn` : `$${Math.round(v)}bn`;
   if (m.money) return '$' + Math.round(v).toLocaleString('en-GB');
   const s = (m.dp === 0 ? Math.round(v) : v.toFixed(m.dp));
-  return withUnit ? s + (m.unit.startsWith('%') ? '%' : ' ' + m.unit) : s;
+  if (!withUnit || !m.unit) return String(s);
+  return s + (m.unit.startsWith('%') ? '%' : ' ' + m.unit);
 }
-const val = (k, code, year = state.year) => {
-  const arr = state.data?.values[k]?.[code];
-  if (!arr) return null;
-  return arr[year - state.data.firstYear] ?? null;
-};
+const srcOf = (k) => (IND[k] || OTHER[k]).src === 'wb' ? state.wb : state.data;
+// Returns { v, y }: the value for the year, or the latest earlier one within the indicator's "carry" window
+function get(k, code, year = state.year) {
+  const D = srcOf(k);
+  const arr = D?.values[k]?.[code];
+  if (!arr) return { v: null, y: null };
+  const carry = (IND[k] || {}).carry || 0;
+  for (let y = year; y >= year - carry; y--) {
+    const v = arr[y - D.firstYear];
+    if (v !== null && v !== undefined) return { v, y };
+  }
+  return { v: null, y: null };
+}
+const val = (k, code, year = state.year) => get(k, code, year).v;
 function colorFor(k, v) {
   if (v === null || v === undefined) return null;
   const { bins, colors } = IND[k];
   for (let i = 0; i < bins.length; i++) if (v < bins[i]) return colors[i];
   return colors[colors.length - 1];
 }
-const nameOf = (code) => state.data.countries[code] || state.data.groups[code] || code;
-const isForecast = (y) => y >= state.forecastFrom;
+const nameOf = (code) => state.data.countries[code] || state.wb?.names[code] || state.data.groups[code] || state.wb?.groups[code] || code;
+const isForecast = (y, k = state.ind) => (IND[k] || OTHER[k]).src !== 'wb' && y >= state.forecastFrom;
+const countryCodes = () => [...new Set([...Object.keys(state.data.countries), ...Object.keys(state.wb?.names || {})])];
 
 // ================= Map =================
 const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best';
@@ -287,14 +369,15 @@ map.on('load', async () => {
   map.on('mousemove', 'fill', (e) => {
     const code = e.features[0].properties.code;
     const tip = $('tip');
-    tip.innerHTML = `<b>${esc(state.data.countries[code] || e.features[0].properties.name)}</b> · ${fmt(state.ind, val(state.ind, code))}`;
+    const g = get(state.ind, code);
+    tip.innerHTML = `<b>${esc(state.data.countries[code] || state.wb?.names[code] || e.features[0].properties.name)}</b> · ${fmt(state.ind, g.v)}${g.y && g.y !== state.year ? ` <span style="color:var(--muted)">(${g.y})</span>` : ''}`;
     tip.style.display = 'block';
     tip.style.left = e.point.x + 14 + 'px';
     tip.style.top = e.point.y + 14 + 'px';
     map.getCanvas().style.cursor = 'pointer';
   });
   map.on('mouseleave', 'fill', () => { $('tip').style.display = 'none'; map.getCanvas().style.cursor = ''; });
-  map.on('click', 'fill', (e) => { const code = e.features[0].properties.code; if (state.data.countries[code]) select(code, false); });
+  map.on('click', 'fill', (e) => { const code = e.features[0].properties.code; if (state.data.countries[code] || state.wb?.names[code]) select(code, false); });
   map.on('click', (e) => { if (isCompact() && !map.queryRenderedFeatures(e.point, { layers: ['fill'] }).length) { $('controls').open = false; sheet(false); } });
   paint();
   animate();
@@ -312,25 +395,34 @@ function paint() {
 
 // ================= UI =================
 function renderInds() {
-  $('inds').innerHTML = IND_ORDER.map((k) => `<button data-k="${k}" class="${k === state.ind ? 'on' : ''}" aria-pressed="${k === state.ind}">${IND[k].short}</button>`).join('');
+  const cat = IND[state.ind].cat;
+  $('cats').innerHTML = CATS.map(([c, label]) => `<button data-c="${c}" class="${c === cat ? 'on' : ''}">${label}</button>`).join('');
+  $('cats').querySelectorAll('button').forEach((b) => b.onclick = () => {
+    if (b.dataset.c === cat) return;
+    state.ind = IND_ORDER.find((k) => IND[k].cat === b.dataset.c); update();
+  });
+  $('inds').innerHTML = IND_ORDER.filter((k) => IND[k].cat === cat).map((k) => `<button data-k="${k}" class="${k === state.ind ? 'on' : ''}" aria-pressed="${k === state.ind}">${IND[k].short}</button>`).join('');
   $('inds').querySelectorAll('button').forEach((b) => b.onclick = () => { state.ind = b.dataset.k; update(); });
 }
 function renderLegend() {
   const m = IND[state.ind];
-  const f = (v) => (m.money ? '$' + (v >= 1000 ? v / 1000 + 'k' : v) : v + (m.unit.startsWith('%') ? '%' : ''));
+  const f = (v) => m.bn ? (v >= 1000 ? `$${v / 1000}tn` : `$${v}bn`) : m.money ? '$' + (v >= 1000 ? v / 1000 + 'k' : v) : v + (m.unit.startsWith('%') ? '%' : m.unit ? ' ' + m.unit : '');
   const rows = m.colors.map((c, i) => {
     const lo = m.bins[i - 1], hi = m.bins[i];
     const label = i === 0 ? `below ${f(hi)}` : i === m.colors.length - 1 ? `${f(lo)} or more` : `${f(lo)} to ${f(hi)}`;
     return `<div class="row"><i style="background:${c}"></i>${label}</div>`;
   }).reverse();
-  $('legend').innerHTML = `<div class="t">${m.name}${m.unit.includes('GDP') ? ' (% of GDP)' : ''}</div>${rows.join('')}<div class="row"><i style="background:#3a4150;opacity:.5"></i>no data</div>`;
+  $('legend').innerHTML = `<div class="t">${m.name}${m.unit.includes('GDP') ? ' (% of GDP)' : ''}</div>${m.src === 'wb' ? `<div style="color:var(--muted);font-size:11px;margin:-2px 0 4px">latest figure up to ${state.year}</div>` : ''}${rows.join('')}<div class="row"><i style="background:#3a4150;opacity:.5"></i>no data</div>`;
 }
 function renderYear() {
   $('year').value = state.year;
-  $('yearLabel').innerHTML = `<b>${state.year}</b><small class="${isForecast(state.year) ? 'fc' : ''}">${isForecast(state.year) ? 'IMF forecast' : 'actual'}</small>`;
+  const wb = IND[state.ind].src === 'wb';
+  $('yearLabel').innerHTML = `<b>${state.year}</b><small class="${isForecast(state.year) ? 'fc' : ''}">${isForecast(state.year) ? 'IMF forecast' : wb ? 'latest data' : 'actual'}</small>`;
 }
 function ranked() {
-  return Object.keys(state.data.countries).map((c) => [c, val(state.ind, c)]).filter(([, v]) => v !== null).sort((a, b) => b[1] - a[1]);
+  // Tiny territories (e.g. Macao, Bermuda) top many tables, so they can be left out of the rankings
+  const big = (c) => !state.hideSmall || (val('LP', c, Math.min(state.year, state.forecastFrom - 1)) ?? 0) >= 1;
+  return countryCodes().map((c) => [c, val(state.ind, c)]).filter(([c, v]) => v !== null && big(c)).sort((a, b) => b[1] - a[1]);
 }
 function renderList() {
   const m = IND[state.ind];
@@ -339,22 +431,24 @@ function renderList() {
   const rows = state.rankMode === 'top' ? r.slice(0, 10) : r.slice(-10).reverse();
   const n0 = state.rankMode === 'top' ? 1 : r.length;
   const row = ([c, v], i, n) => `<div class="rank ${c === 'GBR' ? 'ukrow' : ''}" data-c="${c}"><span class="n">${n}</span><span class="sw" style="background:${colorFor(state.ind, v)}"></span><span class="nm">${esc(nameOf(c))}</span><span class="v">${fmt(state.ind, v)}</span></div>`;
-  const groups = GROUP_ROWS.map(([code, label]) => `<span>${label}</span><span class="v">${fmt(state.ind, val(state.ind, code))}</span>`).join('');
+  const groups = GROUP_ROWS[m.src].map(([code, label]) => `<span>${label}</span><span class="v">${fmt(state.ind, val(state.ind, code))}</span>`).join('');
   $('sheetText').textContent = `${m.name} · ${state.year}`;
   $('listBody').innerHTML = `
+    <input id="search" type="search" placeholder="🔍 Find a country…" autocomplete="off" style="margin:0 0 10px"><div id="results"></div>
     <div class="def">${m.def}</div>
     <div class="compare"><span class="uk">United Kingdom${ukIdx >= 0 ? ` (${ordinal(ukIdx + 1)} of ${r.length})` : ''}</span><span class="v uk">${fmt(state.ind, val(state.ind, 'GBR'))}</span>${groups}</div>
     <div class="seg"><button data-m="top" class="${state.rankMode === 'top' ? 'on' : ''}">Highest 10</button><button data-m="bottom" class="${state.rankMode === 'bottom' ? 'on' : ''}">Lowest 10</button></div>
+    <label style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin:0 0 6px 2px;cursor:pointer"><input type="checkbox" id="hideSmall" ${state.hideSmall ? 'checked' : ''}> Only countries with 1 million+ people</label>
     ${rows.map((x, i) => row(x, i, state.rankMode === 'top' ? i + 1 : n0 - i)).join('')}
     <div class="h3">Discuss</div><ol class="q">${m.q.map((q) => `<li>${q}</li>`).join('')}</ol>
-    <input id="search" placeholder="Find a country…" autocomplete="off"><div id="results"></div>
-    <div class="note">Source: ${esc(state.data.source)}. ${isForecast(state.year) ? 'Figures for this year are IMF forecasts and may change.' : ''}</div>`;
+    <div class="note">Source: ${esc(srcOf(state.ind).source)}. ${isForecast(state.year) ? 'Figures for this year are IMF forecasts and may change.' : ''}${m.src === 'wb' ? `World Bank figures lag by a year or two, so each country shows its latest figure up to ${state.year}${m.carry > 5 ? ' (for this measure, from up to ' + m.carry + ' years earlier)' : ''}.` : ''}</div>`;
   $('listBody').querySelectorAll('.seg button').forEach((b) => b.onclick = () => { state.rankMode = b.dataset.m; renderList(); });
+  $('hideSmall').onchange = (e) => { state.hideSmall = e.target.checked; renderList(); if (state.sel) showCard(state.sel); };
   $('listBody').querySelectorAll('.rank').forEach((el) => el.onclick = () => select(el.dataset.c, true));
   $('search').oninput = (e) => {
     const q = e.target.value.trim().toLowerCase();
-    const hits = q ? Object.entries(state.data.countries).filter(([c, n]) => n.toLowerCase().includes(q) && state.data.values.NGDP_RPCH[c]).slice(0, 6) : [];
-    $('results').innerHTML = hits.map(([c, n]) => `<div data-c="${c}">${esc(n)}</div>`).join('');
+    const hits = q ? countryCodes().map((c) => [c, nameOf(c)]).filter(([c, n]) => n && n.toLowerCase().includes(q) && (state.data.values.NGDP_RPCH[c] || state.wb?.values['SP.DYN.LE00.IN'][c])).slice(0, 6) : [];
+    $('results').innerHTML = hits.map(([c, n]) => `<div data-c="${c}">${esc(n)}</div>`).join('') || (q ? '<div style="color:var(--muted);cursor:default">No match</div>' : '');
     $('results').querySelectorAll('div').forEach((d) => d.onclick = () => select(d.dataset.c, true));
   };
 }
@@ -395,8 +489,8 @@ function select(code, fly) {
 }
 
 function sparkline(code) {
-  const k = state.ind, first = state.data.firstYear;
-  const a = state.data.values[k][code] || [], uk = state.data.values[k].GBR || [];
+  const k = state.ind, D = srcOf(k), first = D.firstYear;
+  const a = D.values[k][code] || [], uk = D.values[k].GBR || [];
   const n = Math.max(a.length, uk.length);
   const all = [...a, ...uk].filter((v) => v !== null);
   if (!all.length) return '';
@@ -405,10 +499,11 @@ function sparkline(code) {
   const W = 320, H = 110, P = 18;
   const X = (i) => P + (i / (n - 1)) * (W - P * 2), Y = (v) => H - 14 - ((v - lo) / (hi - lo)) * (H - 26);
   const line = (arr) => arr.map((v, i) => v === null ? null : `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).filter(Boolean).join(' ');
-  const fx = X(state.forecastFrom - first), yx = X(state.year - first);
+  const fx = X(state.forecastFrom - first), yx = X(Math.min(state.year, first + n - 1) - first);
+  const showFc = IND[k].src !== 'wb' && fx < W - P;
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="${IND[k].name} over time">
-    <rect x="${fx}" y="0" width="${W - P - fx}" height="${H - 14}" fill="rgba(255,184,107,.08)"/>
-    <text x="${W - P}" y="10" fill="#ffb86b" font-size="9" text-anchor="end">forecast</text>
+    ${showFc ? `<rect x="${fx}" y="0" width="${W - P - fx}" height="${H - 14}" fill="rgba(255,184,107,.08)"/>
+    <text x="${W - P}" y="10" fill="#ffb86b" font-size="9" text-anchor="end">forecast</text>` : ''}
     <line x1="${P}" x2="${W - P}" y1="${Y(0)}" y2="${Y(0)}" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 3"/>
     ${code !== 'GBR' ? `<polyline points="${line(uk)}" fill="none" stroke="#ffd24d" stroke-width="1.5" opacity=".8"/>` : ''}
     <polyline points="${line(a)}" fill="none" stroke="#5ebaff" stroke-width="2.2"/>
@@ -422,17 +517,20 @@ function sparkline(code) {
 function showCard(code) {
   const card = $('card'), k = state.ind, m = IND[k];
   const r = ranked(), idx = r.findIndex(([c]) => c === code);
-  const rows = [...IND_ORDER, 'GGXCNL_NGDP'].map((key) => {
+  const keys = [...new Set([...IND_ORDER.filter((x) => IND[x].cat === m.cat), ...(m.cat === 'head' ? ['GGXCNL_NGDP'] : HEADLINE)])];
+  const cell = (key, c) => { const g = get(key, c); return g.v === null ? '–' : fmt(key, g.v) + (g.y !== state.year && IND[key]?.src === 'wb' ? `<small style="color:var(--muted);font-weight:400"> (${g.y})</small>` : ''); };
+  const rows = keys.map((key) => {
     const name = (IND[key] || OTHER[key]).name;
-    return `<span class="${key === k ? 'sel' : ''}">${name}</span><span class="v ${key === k ? 'sel' : ''}">${fmt(key, val(key, code))}</span><span class="v uk">${code === 'GBR' ? '' : fmt(key, val(key, 'GBR'))}</span>`;
+    return `<span class="${key === k ? 'sel' : ''}">${name}</span><span class="v ${key === k ? 'sel' : ''}">${cell(key, code)}</span><span class="v uk">${code === 'GBR' ? '' : cell(key, 'GBR')}</span>`;
   }).join('');
+  const g0 = get(k, code);
   card.innerHTML = `
     <div class="chead">
       <button class="close" aria-label="Close">×</button>
       <h2>${esc(nameOf(code))}</h2>
-      <div class="sub">${m.name}, ${state.year}${isForecast(state.year) ? ' (IMF forecast)' : ''}</div>
+      <div class="sub">${m.name}, ${g0.y || state.year}${isForecast(state.year) ? ' (IMF forecast)' : ''}</div>
       <div class="big"><span style="display:inline-block;width:18px;height:18px;border-radius:4px;margin-right:10px;vertical-align:2px;background:${colorFor(k, val(k, code)) || '#3a4150'}"></span>${fmt(k, val(k, code))}</div>
-      <div class="sub">${idx >= 0 ? `${ordinal(idx + 1)} highest of ${r.length} countries` : 'No figure for this year'}</div>
+      <div class="sub">${idx >= 0 ? `${ordinal(idx + 1)} highest of ${r.length} countries` : g0.v === null ? 'No figure for this year' : 'Not ranked (under 1 million people)'}</div>
       <button class="more"></button>
     </div>
     <div class="cbody">
@@ -442,10 +540,10 @@ function showCard(code) {
         <span>Population</span><span class="v">${fmt('LP', val('LP', code))}</span><span class="v uk">${code === 'GBR' ? '' : fmt('LP', val('LP', 'GBR'))}</span></div>
       <div class="h3">Compare</div>
       <ol class="q">
-        <li>How does ${esc(nameOf(code))} compare with the UK on growth, inflation and unemployment? Which is doing better overall?</li>
+        <li>How does ${esc(nameOf(code))} compare with the UK on the measures above? Which is doing better overall, and by what measure?</li>
         <li>Look at the line chart. What happened in ${esc(nameOf(code))} in 2009 and 2020?</li>
       </ol>
-      <div class="note">Budget balance is government revenue minus spending (negative = deficit). Source: ${esc(state.data.source)}.</div>
+      <div class="note">${m.cat === 'head' ? 'Budget balance is government revenue minus spending (negative = deficit). ' : ''}Sources: ${esc(state.data.source)}${state.wb ? '; ' + esc(state.wb.source) : ''}. Years in brackets show when a World Bank figure is from.</div>
     </div>`;
   const head = card.querySelector('.chead'), more = card.querySelector('.more');
   const setPeek = (p) => { state.cardPeek = p; card.classList.toggle('peek', isCompact() && p); more.textContent = p ? 'Show details ▲' : 'Hide details ▼'; };
@@ -509,6 +607,8 @@ map.once('load', () => setTimeout(() => { if (isCompact()) document.querySelecto
 (async () => {
   try {
     state.data = await (await fetch('data/imf.json', { cache: 'no-cache' })).json();
+    try { state.wb = await (await fetch('data/worldbank.json', { cache: 'no-cache' })).json(); }
+    catch (e) { console.warn('World Bank data not loaded', e); for (const k of IND_ORDER) if (IND[k].src === 'wb') delete IND[k]; IND_ORDER.splice(0, IND_ORDER.length, ...Object.keys(IND)); }
     const ed = (state.data.edition.match(/(20\d\d)/) || [])[1];
     state.forecastFrom = ed ? +ed : new Date().getFullYear();
     const lastYear = state.data.firstYear + Math.max(...Object.values(state.data.values.NGDP_RPCH).map((a) => a.length)) - 1;

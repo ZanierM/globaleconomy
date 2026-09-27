@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'data', 'imf.json');
 const API = 'https://www.imf.org/external/datamapper/api/v1';
-const INDICATORS = ['NGDP_RPCH', 'PCPIPCH', 'LUR', 'GGXWDG_NGDP', 'NGDPDPC', 'BCA_NGDPD', 'GGXCNL_NGDP', 'LP'];
+const INDICATORS = ['NGDP_RPCH', 'PCPIPCH', 'LUR', 'GGXWDG_NGDP', 'NGDPDPC', 'BCA_NGDPD', 'GGXCNL_NGDP', 'LP', 'NGDPD', 'PPPPC', 'PPPSH'];
 const FIRST_YEAR = 2000;
 const LAST_YEAR = new Date().getFullYear() + 5;
 const GROUPS = { WEOWORLD: 'World', ADVEC: 'Advanced economies', OEMDC: 'Emerging and developing economies', EURO: 'Euro area', EU: 'European Union' };
@@ -39,7 +39,7 @@ try {
       const arr = [];
       for (let y = FIRST_YEAR; y <= LAST_YEAR; y++) arr.push(years[y] ?? null);
       while (arr.length && arr[arr.length - 1] === null) arr.pop();
-      if (arr.some((v) => v !== null)) values[k][code] = arr;
+      if (arr.some((v) => v !== null)) values[k][code] = arr.map((v) => (v === null ? null : Math.round(v * 100) / 100));
     }
     console.log(`${k}: ${Object.keys(values[k]).length} countries`);
   }
